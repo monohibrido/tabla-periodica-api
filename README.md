@@ -3,6 +3,16 @@
 API REST con los **118 elementos** de la Tabla Periódica, con datos en español.
 Stack: **Node.js · Express · PostgreSQL**. Desplegada en **Vercel**, con la base de datos en **Neon**.
 
+## Probar la API
+
+Dirección base: **https://tabla-periodica-api.vercel.app**
+
+- [Descripción de la API](https://tabla-periodica-api.vercel.app/)
+- [Hierro (número atómico 26)](https://tabla-periodica-api.vercel.app/api/v1/elementos/26)
+- [Gases nobles (grupo 18)](https://tabla-periodica-api.vercel.app/api/v1/elementos?grupo=18)
+- [Elementos del período 3](https://tabla-periodica-api.vercel.app/api/v1/periodos/3)
+- [Categorías](https://tabla-periodica-api.vercel.app/api/v1/categorias)
+
 ## ¿Cómo funciona?
 
 ```mermaid
