@@ -1,17 +1,38 @@
 # API Tabla Periódica IUPAC
 
-API REST con los 118 elementos de la Tabla Periódica (datos en español).
-Stack: **Node.js + Express + PostgreSQL**, desplegable en **Vercel** (con Neon como base de datos).
+API REST con los **118 elementos** de la Tabla Periódica, con datos en español.
+Stack: **Node.js · Express · PostgreSQL**. Desplegada en **Vercel**, con la base de datos en **Neon**.
+
+## ¿Cómo funciona?
+
+```mermaid
+flowchart LR
+    J[data/elementos.json] -- "npm run seed (una vez)" --> DB[(PostgreSQL)]
+    C[Navegador o frontend] -- "GET /api/v1/..." --> A[API Express]
+    A -- "consulta SQL" --> DB
+    DB -- "filas" --> A
+    A -- "JSON" --> C
+```
+
+1. `data/elementos.json` es solo la **fuente de los datos**. La API **no lo lee** al responder.
+2. `npm run seed` copia esos datos a la tabla `elementos` de PostgreSQL. Se hace una vez, o cada vez que cambie el JSON.
+3. Cada petición a la API ejecuta una consulta SQL contra PostgreSQL y devuelve el resultado en JSON.
+
+| Pieza | Qué es | Dónde vive |
+|---|---|---|
+| Código (este repositorio) | Proyecto Express | GitHub |
+| API en línea | El código ejecutándose | Vercel |
+| Base de datos | Tabla `elementos` con los 118 registros | Neon (PostgreSQL) |
 
 ## Estructura
 
 ```
 tabla-periodica-api/
-├── data/elementos.json     ← los datos originales (118 elementos)
-├── db/schema.sql           ← define la tabla "elementos" en PostgreSQL
-├── scripts/seed.js         ← carga el JSON dentro de PostgreSQL
+├── data/elementos.json     ← datos originales (118 elementos)
+├── db/schema.sql           ← define la tabla "elementos"
+├── scripts/seed.js         ← carga el JSON en PostgreSQL
 ├── src/
-│   ├── index.js            ← punto de entrada (crea la app Express)
+│   ├── index.js            ← punto de entrada (app Express)
 │   ├── db.js               ← conexión a PostgreSQL
 │   ├── routes/             ← un archivo por grupo de endpoints
 │   └── utils/              ← validaciones y formato de respuesta
@@ -19,21 +40,15 @@ tabla-periodica-api/
 └── package.json
 ```
 
-## Cómo funciona (flujo de datos)
-
-1. `data/elementos.json` es solo la **fuente**. La API **no lo lee** al responder.
-2. `npm run seed` copia esos datos a la tabla `elementos` de PostgreSQL (una sola vez).
-3. Cada petición a la API hace una consulta SQL a PostgreSQL y devuelve el resultado en JSON.
-
 ## Endpoints
 
 | Método | Ruta | Qué devuelve |
 |---|---|---|
 | GET | `/` | Descripción de la API |
-| GET | `/api/v1/salud` | Comprueba API y base de datos |
+| GET | `/api/v1/salud` | Comprueba que la API y la base de datos responden |
 | GET | `/api/v1/elementos` | Todos los elementos (con filtros) |
 | GET | `/api/v1/elementos/:numero` | Un elemento por número atómico (1–118) |
-| GET | `/api/v1/elementos/simbolo/:simbolo` | Un elemento por símbolo (`Fe`, `fe`) |
+| GET | `/api/v1/elementos/simbolo/:simbolo` | Un elemento por símbolo (`Fe` o `fe`) |
 | GET | `/api/v1/grupos/:n` | Elementos de un grupo (1–18) |
 | GET | `/api/v1/periodos/:n` | Elementos de un período (1–7) |
 | GET | `/api/v1/categorias` | Categorías y cuántos elementos tiene cada una |
@@ -43,7 +58,32 @@ Filtros de `/api/v1/elementos` (se pueden combinar):
 
 Ejemplo: `/api/v1/elementos?periodo=2&bloque=p&estado=gas`
 
-Errores: `400` (parámetro inválido), `404` (no existe), `500` (error interno). Siempre en JSON: `{ "error": "mensaje" }`.
+Errores siempre en JSON: `400` (parámetro inválido), `404` (no existe), `500` (error interno).
+
+### Ejemplo de respuesta (`/api/v1/elementos/26`, campos principales)
+
+```json
+{
+  "numero_atomico": 26,
+  "simbolo": "Fe",
+  "nombre": "Hierro",
+  "masa_atomica": 55.845,
+  "grupo": 8,
+  "periodo": 4,
+  "bloque": "d",
+  "tipo": "Metal",
+  "categoria": "Metal de transición",
+  "configuracion_electronica": "[Ar] 3d6 4s2",
+  "punto_fusion_c": 1538.0,
+  "punto_ebullicion_c": 2861.0,
+  "densidad_g_cm3": 7.87,
+  "estado_normal": "sólido",
+  "posicion_tabla": {
+    "fila": 4,
+    "columna": 8
+  }
+}
+```
 
 ## Unidades de medida
 
@@ -51,40 +91,47 @@ Errores: `400` (parámetro inválido), `404` (no existe), `500` (error interno).
 |---|---|
 | `masa_atomica` | u (unidad de masa atómica) |
 | `radio_atomico_pm` | pm (picómetros) |
-| `punto_fusion_c`, `punto_ebullicion_c` | °C (grados Celsius) |
+| `punto_fusion_c`, `punto_ebullicion_c` | °C |
 | `densidad_g_cm3` | g/cm³ |
 | `electronegatividad_pauling` | sin unidad (escala de Pauling) |
 
-`null` significa dato desconocido o no medido. `npm run seed` borra y vuelve a crear la tabla `elementos` cada vez, así que si cambias `data/elementos.json` basta con repetirlo.
+`null` significa dato desconocido o no medido.
 
-## Uso en tu computador (Windows / PowerShell)
+## Uso en local
 
-1. Instala dependencias:
-   ```powershell
+Requisitos: Node.js 20 o superior y una base PostgreSQL (por ejemplo, con Docker).
+
+1. Levanta PostgreSQL con Docker (si el puerto 5432 está ocupado, cambia el primer número de `-p`):
+   ```bash
+   docker run --name pg-tabla -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=tabla_periodica -p 5432:5432 -d postgres:16
+   ```
+2. Instala dependencias:
+   ```bash
    npm install
    ```
-2. Crea tu archivo de variables:
-   ```powershell
-   copy .env.example .env
+3. Crea tu archivo de variables a partir de la plantilla y ajusta `DATABASE_URL`:
+   ```bash
+   cp .env.example .env
    ```
-   Edita `.env` y pon tu `DATABASE_URL` (PostgreSQL local, o la de Neon).
-3. Carga los datos en la base (crea la tabla y los 118 elementos):
-   ```powershell
+4. Carga los datos (crea la tabla y los 118 elementos):
+   ```bash
    npm run seed
    ```
-4. Levanta la API:
-   ```powershell
+5. Levanta la API:
+   ```bash
    npm run dev
    ```
-5. Abre `http://localhost:3000/api/v1/elementos/26` en el navegador.
+6. Prueba `http://localhost:3000/api/v1/elementos/26`.
 
-## Despliegue en Vercel + Neon
+## Despliegue
 
-1. Sube el proyecto a un repositorio de GitHub (el `.gitignore` ya excluye `node_modules` y `.env`).
-2. En vercel.com: **Add New → Project**, elige el repositorio e **Import**. Vercel detecta Express solo (usa `src/index.js`).
-3. En el proyecto de Vercel: pestaña **Storage** (o Marketplace) → agrega **Neon (Postgres)** y conéctalo al proyecto.
-   Vercel agrega las variables de entorno de conexión. Revisa en **Settings → Environment Variables** cómo se llama la que contiene la URL (normalmente `DATABASE_URL`; la API también acepta `POSTGRES_URL`).
-4. Carga los datos en Neon **desde tu computador**: copia esa URL en tu `.env` local como `DATABASE_URL` y ejecuta `npm run seed`.
-5. Vuelve a desplegar (o haz un push) y prueba `https://TU-PROYECTO.vercel.app/api/v1/salud`.
+1. El código se sube a GitHub.
+2. En Vercel se importa el repositorio (detecta Express con `src/index.js`).
+3. La base de datos PostgreSQL se crea en Neon y su cadena de conexión se guarda como variable de entorno `DATABASE_URL` en la configuración del proyecto de Vercel.
+4. El seed se ejecuta una vez, apuntando a esa base.
 
-Nota: `express.static()` no sirve archivos en Vercel; los archivos estáticos (el futuro frontend, por ejemplo) van en la carpeta `public/`.
+## Seguridad
+
+- Las credenciales **nunca** se suben al repositorio: `.env` está en `.gitignore`.
+- `.env.example` solo contiene valores de ejemplo.
+- Las consultas SQL usan parámetros (`$1`, `$2`), lo que evita la inyección SQL.
